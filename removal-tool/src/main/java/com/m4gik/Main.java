@@ -5,21 +5,25 @@
  */
 package com.m4gik;
 
-import static com.m4gik.Constants.ADDRESS;
 import static com.m4gik.Constants.CHARSET;
+import static com.m4gik.Constants.GOOGLE;
+import static com.m4gik.Constants.USER_AGENT;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.net.URL;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 
-import com.google.gson.Gson;
-import com.m4gik.GoogleResults.Result;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 /**
  * This is main class which is responsible for gathering information form google
- * search results.
+ * search results. This program encodes command-line arguments as a Google
+ * search query, downloads the results, and saves the corresponding links as
+ * output.
  * 
  * @author m4gik <michal.szczygiel@wp.pl>
  * 
@@ -37,10 +41,12 @@ public class Main {
         String concatenated = args[0] + " ";
 
         for (int i = 1; i < args.length; i++) {
-            concatenated += args[i] + " ";
+            if (i < args.length - 1) {
+                concatenated += args[i] + " ";
+            } else {
+                concatenated += args[i];
+            }
         }
-
-        System.out.println(concatenated);
 
         return concatenated;
     }
@@ -50,9 +56,9 @@ public class Main {
      * 
      * @param args
      *            The query to search. (Minimum one argument is need)
-     * @throws IOException
+     * @throws Exception
      */
-    public static void main(String... args) throws IOException {
+    public static void main(String... args) throws Exception {
 
         if (args.length < 1) {
             System.out.println("Minimum one argument is need");
@@ -67,42 +73,57 @@ public class Main {
             query = args[0];
         }
 
-        GoogleResults results = prepareSearch(query);
-        showSearchResults(results);
-
+        Elements links = parseGoogleLinks(query);
+        showSearchResults(links);
     }
 
     /**
-     * This method prepares search.
+     * Parses HTML output from a Google search and returns a list of
+     * corresponding links for the query.
      * 
      * @param query
-     *            The query to search.
-     * @return The {@link GoogleResults}
+     *            The query for Google search results.
+     * 
+     * @return A list of links for the query.
+     * @throws UnsupportedEncodingException
+     * 
      * @throws IOException
+     *             Thrown if there is an error parsing the results from Google
+     *             or if one of the links returned by Google is not a valid URL.
      */
-    private static GoogleResults prepareSearch(String query) throws IOException {
+    private static Elements parseGoogleLinks(final String query)
+            throws UnsupportedEncodingException, IOException {
 
-        URL url = new URL(ADDRESS + URLEncoder.encode(query, CHARSET));
-        Reader reader = new InputStreamReader(url.openStream(), CHARSET);
+        // These tokens are adequate for parsing the HTML from Google. First,
+        // find a heading-3 element with an "r" class. Then find the next anchor
+        // with the desired link. The last token indicates the end of the URL
+        // for the link.
+        Document document = Jsoup
+                .connect(GOOGLE + URLEncoder.encode(query, CHARSET))
+                .userAgent(USER_AGENT).get();
 
-        return new Gson().fromJson(reader, GoogleResults.class);
+        Elements links = document.select("li.g>h3>a");
 
+        return links;
     }
 
     /**
      * This method shows search result.
      * 
-     * @param results
-     *            The instance of {@link {@link GoogleResults}
+     * @param links
+     *            The instance of {@link Elements}
+     * @throws UnsupportedEncodingException
      */
-    private static void showSearchResults(GoogleResults results) {
-        int total = results.getResponseData().getResults().size();
-        System.out.println("total: " + total);
+    private static void showSearchResults(final Elements links)
+            throws UnsupportedEncodingException {
+        for (Element link : links) {
+            String url = link.absUrl("href"); // Google returns URLs in format
+                                              // "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
+            url = URLDecoder.decode(
+                    url.substring(url.indexOf('=') + 1, url.indexOf('&')),
+                    "UTF-8");
 
-        // Show title and URL of each results
-        for (Result result : results.getResponseData().getResults()) {
-            System.out.println("Title: " + result.getTitle());
-            System.out.println("URL: " + result.getUrl() + "\n");
+            System.out.println("URL: " + url);
         }
     }
 }
