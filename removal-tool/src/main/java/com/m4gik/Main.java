@@ -27,6 +27,25 @@ import com.m4gik.GoogleResults.Result;
 public class Main {
 
     /**
+     * This method makes concatenation of given arguments.
+     * 
+     * @param args
+     *            The strings to concatenation.
+     * @return concatenated {@link String}
+     */
+    private static String concatenationProcess(String[] args) {
+        String concatenated = args[0] + " ";
+
+        for (int i = 1; i < args.length; i++) {
+            concatenated += args[i] + " ";
+        }
+
+        System.out.println(concatenated);
+
+        return concatenated;
+    }
+
+    /**
      * The main method.
      * 
      * @param args
@@ -40,10 +59,17 @@ public class Main {
             System.exit(0);
         }
 
-        String query = args[0];
+        String query = null;
+
+        if (args.length > 1) {
+            query = concatenationProcess(args);
+        } else {
+            query = args[0];
+        }
 
         GoogleResults results = prepareSearch(query);
         showSearchResults(results);
+
     }
 
     /**
