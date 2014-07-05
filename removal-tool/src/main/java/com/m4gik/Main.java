@@ -40,11 +40,13 @@ public class Main {
     private static String concatenationProcess(String[] args) {
         String concatenated = args[0] + " ";
 
-        for (int i = 1; i < args.length; i++) {
-            if (i < args.length - 1) {
-                concatenated += args[i] + " ";
-            } else {
-                concatenated += args[i];
+        if (args.length > 1) {
+            for (int i = 1; i < args.length; i++) {
+                if (i < args.length - 1) {
+                    concatenated += args[i] + " ";
+                } else {
+                    concatenated += args[i];
+                }
             }
         }
 
@@ -65,13 +67,7 @@ public class Main {
             System.exit(0);
         }
 
-        String query = null;
-
-        if (args.length > 1) {
-            query = concatenationProcess(args);
-        } else {
-            query = args[0];
-        }
+        String query = concatenationProcess(args);
 
         Elements links = parseGoogleLinks(query);
         showSearchResults(links);
