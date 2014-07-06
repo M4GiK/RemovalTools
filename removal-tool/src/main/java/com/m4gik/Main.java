@@ -9,7 +9,9 @@ import static com.m4gik.Constants.CHARSET;
 import static com.m4gik.Constants.GOOGLE;
 import static com.m4gik.Constants.USER_AGENT;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -110,6 +112,7 @@ public class Main {
             }
         }
 
+        saveToFile(dataToSave);
         showSearchResults(dataToSave);
     }
 
@@ -143,6 +146,26 @@ public class Main {
         Elements links = document.select("li.g>h3>a");
 
         return links;
+    }
+
+    /**
+     * This method saves data to file.
+     * 
+     * @param dataToSave
+     *            The data to save.
+     */
+    private static void saveToFile(List<String> dataToSave) {
+        try {
+            PrintWriter writer = new PrintWriter("urls.txt", "UTF-8");
+
+            for (String string : dataToSave) {
+                writer.println(string);
+            }
+
+            writer.close();
+        } catch (FileNotFoundException | UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
