@@ -13,6 +13,9 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -50,7 +53,30 @@ public class Main {
             }
         }
 
+        System.out.println(concatenated);
         return concatenated;
+    }
+
+    /**
+     * 
+     * @param elements
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    private static List<String> getSearchResults(Elements elements)
+            throws UnsupportedEncodingException {
+        List<String> searchResult = new ArrayList<String>();
+
+        for (Element link : elements) {
+            String url = link.absUrl("href"); // Google returns URLs in format
+                                              // "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>"
+
+            searchResult.add(URLDecoder.decode(
+                    url.substring(url.indexOf('=') + 1, url.indexOf('&')),
+                    "UTF-8"));
+        }
+
+        return searchResult;
     }
 
     /**
@@ -68,9 +94,22 @@ public class Main {
         }
 
         String query = concatenationProcess(args);
+        Boolean isResult = true;
+        Integer pageNumber = 0;
+        List<String> dataToSave = new ArrayList<String>();
 
-        Elements links = parseGoogleLinks(query);
-        showSearchResults(links);
+        while (isResult) {
+            List<String> urls = getSearchResults(parseGoogleLinks(query,
+                    pageNumber));
+            if (urls.size() == 0) {
+                isResult = false;
+            } else {
+                pageNumber += 10;
+                dataToSave.addAll(urls);
+            }
+        }
+
+        showSearchResults(dataToSave);
     }
 
     /**
@@ -87,16 +126,18 @@ public class Main {
      *             Thrown if there is an error parsing the results from Google
      *             or if one of the links returned by Google is not a valid URL.
      */
-    private static Elements parseGoogleLinks(final String query)
-            throws UnsupportedEncodingException, IOException {
+    private static Elements parseGoogleLinks(final String query,
+            Integer pageNumber) throws UnsupportedEncodingException,
+            IOException {
 
         // These tokens are adequate for parsing the HTML from Google. First,
         // find a heading-3 element with an "r" class. Then find the next anchor
         // with the desired link. The last token indicates the end of the URL
         // for the link.
         Document document = Jsoup
-                .connect(GOOGLE + URLEncoder.encode(query, CHARSET))
-                .userAgent(USER_AGENT).get();
+                .connect(
+                        GOOGLE + URLEncoder.encode(query, CHARSET) + "&start="
+                                + pageNumber).userAgent(USER_AGENT).get();
 
         Elements links = document.select("li.g>h3>a");
 
@@ -107,19 +148,12 @@ public class Main {
      * This method shows search result.
      * 
      * @param links
-     *            The instance of {@link Elements}
-     * @throws UnsupportedEncodingException
+     *            The instance of {@link Collection<? extends String>}
      */
-    private static void showSearchResults(final Elements links)
-            throws UnsupportedEncodingException {
-        for (Element link : links) {
-            String url = link.absUrl("href"); // Google returns URLs in format
-                                              // "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
-            url = URLDecoder.decode(
-                    url.substring(url.indexOf('=') + 1, url.indexOf('&')),
-                    "UTF-8");
-
-            System.out.println("URL: " + url);
+    private static void showSearchResults(
+            final Collection<? extends String> links) {
+        for (String link : links) {
+            System.out.println("URL: " + link);
         }
     }
 }
