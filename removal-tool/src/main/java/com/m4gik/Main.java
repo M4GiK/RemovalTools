@@ -53,14 +53,15 @@ public class Main {
             }
         }
 
-        System.out.println(concatenated);
         return concatenated;
     }
 
     /**
+     * This method gets search result and put it to {@link List}.
      * 
      * @param elements
-     * @return
+     *            The elements from which the data will be extracted.
+     * @return The {@link List} of urls.
      * @throws UnsupportedEncodingException
      */
     private static List<String> getSearchResults(Elements elements)
