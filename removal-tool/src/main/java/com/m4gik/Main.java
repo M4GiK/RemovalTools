@@ -5,8 +5,6 @@
  */
 package com.m4gik;
 
-import static com.m4gik.Constants.CHARSET;
-import static com.m4gik.Constants.GOOGLE;
 import static com.m4gik.Constants.USER_AGENT;
 
 import java.io.FileNotFoundException;
@@ -14,11 +12,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Random;
 
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -70,13 +71,16 @@ public class Main {
             throws UnsupportedEncodingException {
         List<String> searchResult = new ArrayList<String>();
 
-        for (Element link : elements) {
-            String url = link.absUrl("href"); // Google returns URLs in format
-                                              // "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>"
+        if (elements.size() != 0) {
+            for (Element link : elements) {
+                String url = link.absUrl("href"); // Google returns URLs in
+                                                  // format
+                                                  // "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>"
 
-            searchResult.add(URLDecoder.decode(
-                    url.substring(url.indexOf('=') + 1, url.indexOf('&')),
-                    "UTF-8"));
+                searchResult.add(URLDecoder.decode(
+                        url.substring(url.indexOf('=') + 1, url.indexOf('&')),
+                        "UTF-8"));
+            }
         }
 
         return searchResult;
@@ -112,6 +116,7 @@ public class Main {
             }
         }
 
+        dataToSave = reduceDuplicateResults(dataToSave);
         saveToFile(dataToSave);
         showSearchResults(dataToSave);
     }
@@ -138,14 +143,77 @@ public class Main {
         // find a heading-3 element with an "r" class. Then find the next anchor
         // with the desired link. The last token indicates the end of the URL
         // for the link.
-        Document document = Jsoup
-                .connect(
-                        GOOGLE + URLEncoder.encode(query, CHARSET) + "&start="
-                                + pageNumber).userAgent(USER_AGENT).get();
+        String searchQuery = "https://www.google.pl/search?client=ubuntu&channel=fs&q=site%3Aftp%3A%2F%2F87.239.220.142%2FM4GiK%2FEmployment%2FDescom%2FJava%2Fworkspaces%2FMTG&ie=utf-8&oe=utf-8&gfe_rd=cr&ei=lJW6U-miJ8yH8QeIxoGgCg#channel=fs&q=site%3Aftp%3A%2F%2F87.239.220.142%2FM4GiK%2FEmployment%2FDescom%2FJava%2Fworkspaces%2FMTG";
+        // Document document = Jsoup
+        // .connect(
+        // GOOGLE + URLEncoder.encode(query, CHARSET) + "&start="
+        // + pageNumber).userAgent(USER_AGENT).get();
 
-        Elements links = document.select("li.g>h3>a");
+        Elements links = null;
+
+        try {
+            Document document = Jsoup
+                    .connect(searchQuery + "&start=" + pageNumber)
+                    .userAgent(USER_AGENT).timeout(10000).followRedirects(true)
+                    .get();
+
+            links = document.select("li.g>h3>a");
+
+            Thread.sleep(1000 * randInt(1, 10)); // To avoid error 503
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        } catch (HttpStatusException ex) {
+            ex.printStackTrace();
+        }
 
         return links;
+    }
+
+    /**
+     * Returns a psuedo-random number between min and max, inclusive. The
+     * difference between min and max can be at most
+     * <code>Integer.MAX_VALUE - 1</code>.
+     * 
+     * @param min
+     *            Minimim value
+     * @param max
+     *            Maximim value. Must be greater than min.
+     * @return Integer between min and max, inclusive.
+     * @see java.util.Random#nextInt(int)
+     */
+    public static int randInt(int min, int max) {
+
+        // Usually this can be a field rather than a method variable
+        Random rand = new Random();
+
+        // nextInt is normally exclusive of the top value,
+        // so add 1 to make it inclusive
+        int randomNum = rand.nextInt((max - min) + 1) + min;
+
+        return randomNum;
+    }
+
+    /**
+     * This method reduces the same search results.
+     * 
+     * @param dataToSave
+     *            The data to save.
+     * @return Reduced list.
+     */
+    private static List<String> reduceDuplicateResults(List<String> dataToSave) {
+        HashMap<String, String> reducedMap = new HashMap<String, String>();
+
+        for (String string : dataToSave) {
+            reducedMap.put(string, string);
+        }
+
+        List<String> reducedList = new ArrayList<String>();
+
+        for (Entry<String, String> entry : reducedMap.entrySet()) {
+            reducedList.add(entry.getKey());
+        }
+
+        return reducedList;
     }
 
     /**
